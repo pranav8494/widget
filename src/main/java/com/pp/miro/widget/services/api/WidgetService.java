@@ -1,0 +1,51 @@
+package com.pp.miro.widget.services.api;
+
+import com.pp.miro.widget.bom.Widget;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Service API for {@link Widget}.
+ */
+public interface WidgetService {
+
+  /**
+   * creates a new {@link Widget}
+   *
+   * @param widget
+   * @return Widget created.
+   */
+  Widget createWidget(Widget widget);
+
+  /**
+   * updates the given Widget.
+   *
+   * @param widget
+   * @return
+   */
+  Widget updateWidget(Widget widget);
+
+  /**
+   * Get {@link Widget} by id.
+   *
+   * @param id
+   * @return Optional of Widget if it exists else {@link Optional#EMPTY}.
+   */
+  Optional<Widget> getWidgetById(String id);
+
+  /**
+   * Gets all the widgets from data repo.
+   *
+   * @return
+   */
+  List<Widget> getAllWidgets();
+
+  /**
+   * Delete the Widget with given ID if found.
+   *
+   * @param id
+   * @return <code>true</code> if successfully deleted, else <code>false</code>.
+   */
+  boolean deleteWidget(String id);
+}

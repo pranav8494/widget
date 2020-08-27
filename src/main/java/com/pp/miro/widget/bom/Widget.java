@@ -14,7 +14,7 @@ import java.util.UUID;
 @Builder
 public class Widget implements Serializable {
 
-  private UUID widgetId;
+  private UUID id;
   private Integer xCoOrdinate;
   private Integer yCoOrdinate;
   private Integer zIndex;

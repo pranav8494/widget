@@ -2,12 +2,16 @@ package com.pp.miro.widget.repository.impl;
 
 import com.pp.miro.widget.bom.Widget;
 import com.pp.miro.widget.repository.api.WidgetRepo;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -16,7 +20,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
+@Repository
+@Slf4j
+public class InMemoryWidgetRepo implements WidgetRepo {
 
   private final Lock readLock;
   private final Lock writeLock;
@@ -37,16 +43,17 @@ public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
   public Widget store(Widget widget) {
 
     if (widget == null) {
+      log.debug("[REPO] - Input error: Widget Can't be NULL!!");
       throw new IllegalArgumentException("[ERROR] - Widget Can't be NULL!!");
     }
     writeLock.lock();
     try {
       
-      if (widget.getWidgetId() == null) {
+      if (widget.getId() == null) {
         // First time seeing the widget. No need to check in widgetStore.
-        widget.setWidgetId(UUID.randomUUID());
+        widget.setId(UUID.randomUUID());
       } else {
-        mergeWidgetWithStoreWidget(widget);
+        mergeWithInStoreWidget(widget);
       }
 
       // if Z index is not set, then set it.
@@ -63,21 +70,59 @@ public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
 
   
   private void insertWidgetInStore(Widget widget) {
+    widget.setLastModificationDate(LocalDateTime.now());
     if(isReplacingWidgetForZIndex(widget)){
-       // TODO Logic to insert new widget at zIndex and then update and move existing widgets in map.
+
+      log.debug("[REPO] - Overwrite detected.");
+
+      removeWidgetFromZIndexMap(widget);
+      
+      // insert new widget at zIndex and then update and move existing widgets in map.
+      Set<Integer> zIndexKeysToReplace = zIndexToWidgetStore.tailMap(widget.getZIndex()).keySet();
+      Widget newWidget = widget;
+      
+      for(Integer key : zIndexKeysToReplace) {
+        if(key == newWidget.getZIndex()){
+          Integer newZIndexForOldWidget = key + 1;
+          Widget oldWidget = widgetStore.get(zIndexToWidgetStore.get(key));
+          oldWidget.setZIndex(newZIndexForOldWidget);
+          zIndexToWidgetStore.put(key, newWidget.getId().toString());
+          newWidget = oldWidget;
+        }
+        else{
+          zIndexToWidgetStore.put(newWidget.getZIndex(), newWidget.getId().toString());
+          break;
+        }        
+      }
+      
+      // To cover the last item in the map if need to move until end.
+      if(zIndexToWidgetStore.lastKey() < newWidget.getZIndex()){
+        zIndexToWidgetStore.put(newWidget.getZIndex(), newWidget.getId().toString());
+      }      
     }
-    widgetStore.put(widget.getWidgetId().toString(), widget);
-    zIndexToWidgetStore.put(widget.getZIndex(), widget.getWidgetId().toString());
+    else {
+      if(zIndexToWidgetStore.values().contains(widget.getId().toString())){
+        removeWidgetFromZIndexMap(widget);
+      }
+      zIndexToWidgetStore.put(widget.getZIndex(), widget.getId().toString());
+    }
+    widgetStore.put(widget.getId().toString(), widget);
   }
   
+  private void removeWidgetFromZIndexMap(Widget widget){
+    Optional.ofNullable(widgetStore.get(widget.getId().toString())).map(oldWidgetInStore -> {
+      zIndexToWidgetStore.remove(oldWidgetInStore.getZIndex());
+      return oldWidgetInStore;
+    });
+  }
 
   private boolean isReplacingWidgetForZIndex(Widget widget){
     String widgetAtZIndexInStore = zIndexToWidgetStore.get(widget.getZIndex());
-    return widgetAtZIndexInStore != null && widgetAtZIndexInStore.equals(widget.getWidgetId().toString());
+    return widgetAtZIndexInStore != null && !widgetAtZIndexInStore.equals(widget.getId().toString());
   }
 
-  private void mergeWidgetWithStoreWidget(Widget widget) {
-    Optional<Widget> widgetInStore = retrieve(widget.getWidgetId().toString());
+  private void mergeWithInStoreWidget(Widget widget) {
+    Optional<Widget> widgetInStore = retrieve(widget.getId().toString());
     if(widgetInStore.isPresent()) {
       if (widget.getXCoOrdinate() == null) {
         widget.setXCoOrdinate(widgetInStore.get().getXCoOrdinate());
@@ -94,6 +139,10 @@ public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
       if (widget.getWidgetHeight() == null) {
         widget.setWidgetHeight(widgetInStore.get().getWidgetHeight());
       }          
+    }
+    else {
+      // The ID doesnt exist in storage, hence a new widget, Resetting ID.
+      widget.setId(UUID.randomUUID());
     }
   }
 
@@ -118,6 +167,7 @@ public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
 
   private void validateId(String id) {
     if (StringUtils.isEmpty(id)) {
+      log.debug("[REPO] - Input error: Can't find Widget with empty or null id!");
       throw new IllegalArgumentException("[ERROR] - Can't find Widget with empty or null id!");
     }
   }
@@ -139,7 +189,7 @@ public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
   }
 
   @Override
-  public List<Widget> getAll() {
+  public List<Widget> retrieveAllWidgets() {
     
     readLock.lock();
     try{
@@ -149,4 +199,9 @@ public class InMemoryWidgetRepo implements WidgetRepo<Widget> {
     }
   }
 
+  @Override
+  public void wipeRepo() {
+    widgetStore.clear();
+    zIndexToWidgetStore.clear();
+  }
 }

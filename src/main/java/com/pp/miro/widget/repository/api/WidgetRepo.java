@@ -1,5 +1,6 @@
 package com.pp.miro.widget.repository.api;
 
+import com.pp.miro.widget.bom.Widget;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -8,20 +9,19 @@ import java.util.Optional;
 /**
  * Repository for Widgets.
  */
-@Repository
-public interface WidgetRepo<T> {
+public interface WidgetRepo {
 
   /**
    * Store the given widget object in db/store.
    * @param widget
    * @return
    */
-  T store(T widget);
+  Widget store(Widget widget);
 
   /** 
    * Retrieve the object for the given ID from db/store.
    */
-  Optional<T> retrieve(String id);
+  Optional<Widget> retrieve(String id);
 
   /**
    * Delete the object for the given ID from db/store.
@@ -34,5 +34,10 @@ public interface WidgetRepo<T> {
    * Gets all the widgets from the db/store.
    * @return
    */
-  List<T> getAll();
+  List<Widget> retrieveAllWidgets();
+
+  /**
+   * To wipeout all the data in repo. Mainly needed for testing.
+   */
+  void wipeRepo();
 }

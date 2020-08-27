@@ -16,7 +16,7 @@ public interface WidgetService {
    * @param widget
    * @return Widget created.
    */
-  Widget createWidget(Widget widget);
+  Widget saveWidget(Widget widget);
 
   /**
    * updates the given Widget.
@@ -32,14 +32,14 @@ public interface WidgetService {
    * @param id
    * @return Optional of Widget if it exists else {@link Optional#EMPTY}.
    */
-  Optional<Widget> getWidgetById(String id);
+  Optional<Widget> retrieveWidget(String id);
 
   /**
    * Gets all the widgets from data repo.
    *
    * @return
    */
-  List<Widget> getAllWidgets();
+  List<Widget> retrieveAllWidgets();
 
   /**
    * Delete the Widget with given ID if found.

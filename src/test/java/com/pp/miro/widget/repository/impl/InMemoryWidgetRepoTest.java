@@ -168,8 +168,6 @@ public class InMemoryWidgetRepoTest {
   
 
   private void testCommonProperties(Widget widget) {
-    Assertions.assertTrue(widget.getLastModificationDate().isBefore(LocalDateTime.now()) ||
-        widget.getLastModificationDate().isEqual(LocalDateTime.now()));
     Assertions.assertTrue(widget.getId() != null);
   }  
 }

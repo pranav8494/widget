@@ -30,6 +30,11 @@ public class WidgetServiceImpl implements WidgetService {
     if (widget == null || widget.getId() == null || StringUtils.isEmpty(widget.getId().toString())) {
       throw new IllegalArgumentException("[ERROR] - Either Widget is null or Widget ID is empty!!");
     }
+    
+    if(!widgetRepo.retrieve(widget.getId().toString()).isPresent()){
+      throw new IllegalArgumentException("[ERROR] - Widget you are trying to update doesn't exist!!");
+    }
+    
     return widgetRepo.store(widget);
   }
 
@@ -40,11 +45,19 @@ public class WidgetServiceImpl implements WidgetService {
 
   @Override
   public List<Widget> retrieveAllWidgets() {
+    
     return widgetRepo.retrieveAllWidgets();
   }
 
   @Override
   public boolean deleteWidget(String id) {
+    
     return widgetRepo.delete(id);
+  }
+
+  @Override
+  public List<Widget> filterWidgetsByCoOrdinateRange(Integer fromX, Integer fromY, Integer toX, Integer toY) {
+    
+    return widgetRepo.filterWidgetsByCoOrdinateRange(fromX, fromY, toX, toY);
   }
 }

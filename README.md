@@ -3,61 +3,73 @@ A REST API project for Miro Widget. The project is built with following:
 * Java 8
 * Build tool: Maven 3.2+
 * Backend framework: Sprint-boot
+    * OpenAPI for API UI.
 
 ## Howto's:
 
 ### Build the project: 
-
-Build the project with mvn:
-`mvn clean install`
+* Checkout the project.
+* Build the project with maven: 
+    
+    `mvn clean install`
 
 ### Launching the server:
-Launch the server with following:
-`mvn spring-boot:run`
+* After the build is done launch the server with following:
 
-The server is launch on 8080 port. Locally target on `http://localhost:8080`.
+    `mvn spring-boot:run`
+
+* Server is launched on 8080 port. Target on http://localhost:8080/widget
+* To access the interactive API (openAPI) on: http://localhost:8080/api 
 
 ## REST API Exposed: 
 
-OpenAPI available with the project. Once the server is launched you can use the swagger api target WS with following link: 
-http://localhost:8080/api
+Following rest APIs are exposed. For all the below mentioned API, we can test them with swagger exposed API or use curl as given under usage. 
 
-Following rest APIs are exposed:
-
-### To store a widget: 
-
-#### Saving a new widget
+#### Store new widget
 POST api to save a new widget or update existing one. 
-* An update is triggered if an ID is provided for the widget. 
-* In case no widget exists in store for given ID, the ID is reset and a new widget is added.
-
+* If no ID is given, a new widget with new unique ID is created.
+* If an ID is given:
+  * If widget exists in the store with given ID, update is triggered.
+  * If no widget with given ID exists in store, then ID is reset with system generated unique ID and stored in store.
+  
+#####curl example
 `curl -d '{"xCoOrdinate":0,"yCoOrdinate":0,"widgetWidth":20,"widgetHeight":20}' -H "Content-Type: application/json" http://localhost:8080/widget`
 
-#### update an existing one:
+#### Update existing widget
+PUT api to update an existing widget in store. If the widget doesnt exist, then returns 400. 
+
+#####curl example
 `curl -d '{"xCoOrdinate":0,"yCoOrdinate":0,"widgetWidth":20,"widgetHeight":20}' -H "Content-Type: application/json" http://localhost:8080/widget`
 
-Sample Widget: 
+### Retrieve widget by ID
+GET WS to retrieve a widget by ID. If no widget with ID exists, then returns `404 : Not Found`.
 
-`{"widgetId":"01766200-3ad5-4150-87da-b6312cd23b56","widgetWidth":20,"widgetHeight":20,"lastModificationDate":"2020-08-27T11:58:59.01","xcoOrdinate":0,"ycoOrdinate":0,"zindex":0}`
-
-
-### To retreive a widget by ID: 
-GET WS to retrieve a widget by ID.
+#####curl example
 `curl http://localhost:8080/widget/{id}`
 
 
-### To retrieve all widgets:
+#### To retrieve all widgets:
 GET WS to get all the widgets which exist in the store.
+
+#####curl example
 `curl http://localhost:8080/widget/all`
 
-### To Delete a widget: 
-DELETE WS to delete the widget with given ID.
+#### To filter widgets by X Y coordinate range:
+GET WS to filter and get all the widgets which fall within the given X & Y CoOrdinate range.
+
+#####curl example
+`curl GET http://localhost:8080/widget/filter/0/0/5/5`
+
+#### To Delete a widget: 
+DELETE WS to delete the widget with given ID. If no widget with ID exists, then returns `404 : Not Found`.
+
+#####curl example
 `curl -X "DELETE" http://localhost:8080/widget/{id}`
 
 ## Test Coverage
 
 Classes: 100% 
-Lines: 78%
+Lines: 84%
 
 Full report screenshot below:
 

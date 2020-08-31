@@ -154,6 +154,18 @@ public class InMemoryWidgetRepoTest {
     Assertions.assertEquals(53, repo.retrieveAllWidgets().size());
   }
   
+  @Test
+  void testFilterAllWidgetsByCoOrdinateRange(){
+    repo.store(WidgetTestUtils.createWidgetWithDifferentXY(widget1, 5));
+    List<Widget> firstRangeWidgets = repo.filterWidgetsByCoOrdinateRange(0, 0, 3, 3);
+    List<Widget> secondRangeWidgets = repo.filterWidgetsByCoOrdinateRange(3, 3, 7, 7);
+    List<Widget> allRangeWidgets = repo.filterWidgetsByCoOrdinateRange(0, 0, 7, 7);
+    
+    Assertions.assertEquals(2, firstRangeWidgets.size());
+    Assertions.assertEquals(1, secondRangeWidgets.size());
+    Assertions.assertEquals(3, allRangeWidgets.size());
+  }
+  
 
   private void testCommonProperties(Widget widget) {
     Assertions.assertTrue(widget.getLastModificationDate().isBefore(LocalDateTime.now()) ||

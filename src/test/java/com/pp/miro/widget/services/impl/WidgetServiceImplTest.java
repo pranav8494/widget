@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @ExtendWith(SpringExtension.class)
@@ -46,6 +47,7 @@ public class WidgetServiceImplTest {
     Widget widget = WidgetTestUtils.createWidget();
     widget.setId(UUID.randomUUID());
     Mockito.when(repo.store(Mockito.any())).thenReturn(widget);
+    Mockito.when(repo.retrieve(widget.getId().toString())).thenReturn(Optional.ofNullable(widget));
     Assertions.assertNotNull(service.updateWidget(widget));
   }
   

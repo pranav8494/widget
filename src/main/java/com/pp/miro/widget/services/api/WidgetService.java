@@ -48,4 +48,14 @@ public interface WidgetService {
    * @return <code>true</code> if successfully deleted, else <code>false</code>.
    */
   boolean deleteWidget(String id);
+
+  /**
+   * Gets all the widgets within the given CoOrdinate range.
+   * @param fromX
+   * @param fromY
+   * @param toX
+   * @param toY
+   * @return
+   */
+  List<Widget> filterWidgetsByCoOrdinateRange(Integer fromX, Integer fromY, Integer toX, Integer toY);
 }

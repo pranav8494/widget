@@ -40,4 +40,14 @@ public interface WidgetRepo {
    * To wipeout all the data in repo. Mainly needed for testing.
    */
   void wipeRepo();
+
+  /**
+   * Gets all the widgets within the given CoOrdinate range.
+   * @param fromX
+   * @param toX
+   * @param fromY
+   * @param toY
+   * @return
+   */
+  List<Widget> filterWidgetsByCoOrdinateRange(Integer fromX, Integer fromY, Integer toX, Integer toY);
 }

@@ -7,7 +7,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +35,7 @@ public class InMemoryWidgetRepo implements WidgetRepo {
    */
   private final Map<String, Widget> widgetStore = new HashMap();
   private final SortedMap<Integer, String> zIndexToWidgetStore = new TreeMap();
+  private final SortedMap<Integer, SortedMap<Integer, Set<String>>> widgetsSortedByCoOrdinateMap = new TreeMap();
 
   public InMemoryWidgetRepo() {
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -48,12 +52,13 @@ public class InMemoryWidgetRepo implements WidgetRepo {
     }
     writeLock.lock();
     try {
-      
+
       if (widget.getId() == null) {
         // First time seeing the widget. No need to check in widgetStore.
         widget.setId(UUID.randomUUID());
       } else {
         mergeWithInStoreWidget(widget);
+        removeWidgetFromCoOrdinateMap(widget);
       }
 
       // if Z index is not set, then set it.
@@ -68,7 +73,6 @@ public class InMemoryWidgetRepo implements WidgetRepo {
     }
   }
 
-  
   private void insertWidgetInStore(Widget widget) {
     widget.setLastModificationDate(LocalDateTime.now());
     if(isReplacingWidgetForZIndex(widget)){
@@ -76,11 +80,11 @@ public class InMemoryWidgetRepo implements WidgetRepo {
       log.debug("[REPO] - Overwrite detected.");
 
       removeWidgetFromZIndexMap(widget);
-      
+
       // insert new widget at zIndex and then update and move existing widgets in map.
       Set<Integer> zIndexKeysToReplace = zIndexToWidgetStore.tailMap(widget.getZIndex()).keySet();
       Widget newWidget = widget;
-      
+
       for(Integer key : zIndexKeysToReplace) {
         if(key == newWidget.getZIndex()){
           Integer newZIndexForOldWidget = key + 1;
@@ -92,13 +96,13 @@ public class InMemoryWidgetRepo implements WidgetRepo {
         else{
           zIndexToWidgetStore.put(newWidget.getZIndex(), newWidget.getId().toString());
           break;
-        }        
+        }
       }
-      
+
       // To cover the last item in the map if need to move until end.
       if(zIndexToWidgetStore.lastKey() < newWidget.getZIndex()){
         zIndexToWidgetStore.put(newWidget.getZIndex(), newWidget.getId().toString());
-      }      
+      }
     }
     else {
       if(zIndexToWidgetStore.values().contains(widget.getId().toString())){
@@ -107,8 +111,30 @@ public class InMemoryWidgetRepo implements WidgetRepo {
       zIndexToWidgetStore.put(widget.getZIndex(), widget.getId().toString());
     }
     widgetStore.put(widget.getId().toString(), widget);
+    putWidgetInCoOrdinateMap(widget);
   }
-  
+
+  private void putWidgetInCoOrdinateMap(Widget widget) {
+    SortedMap<Integer, Set<String>> yCoOrdinateMap =
+        Optional.ofNullable(widgetsSortedByCoOrdinateMap.get(widget.getXCoOrdinate())).orElse(new TreeMap());
+    Set<String> widgetIds = Optional.ofNullable(yCoOrdinateMap.get(widget.getYCoOrdinate())).orElse(new HashSet<String>());
+    widgetIds.add(widget.getId().toString());
+    yCoOrdinateMap.put(widget.getYCoOrdinate(), widgetIds);
+    widgetsSortedByCoOrdinateMap.put(widget.getXCoOrdinate(), yCoOrdinateMap);
+  }
+
+  private void removeWidgetFromCoOrdinateMap(Widget widget) {
+
+    Optional.ofNullable(widgetStore.get(widget.getId().toString())).ifPresent(
+        w -> Optional.ofNullable(widgetsSortedByCoOrdinateMap.get(w.getXCoOrdinate())).ifPresent(
+            yCoOrdinateMap -> Optional.ofNullable(yCoOrdinateMap.get(w.getYCoOrdinate())).ifPresent(
+                widgetIds -> {
+                  widgetIds.remove(w.getId().toString());
+                } 
+        )
+    ));
+  }
+
   private void removeWidgetFromZIndexMap(Widget widget){
     Optional.ofNullable(widgetStore.get(widget.getId().toString())).map(oldWidgetInStore -> {
       zIndexToWidgetStore.remove(oldWidgetInStore.getZIndex());
@@ -138,7 +164,7 @@ public class InMemoryWidgetRepo implements WidgetRepo {
       }
       if (widget.getWidgetHeight() == null) {
         widget.setWidgetHeight(widgetInStore.get().getWidgetHeight());
-      }          
+      }
     }
     else {
       // The ID doesnt exist in storage, hence a new widget, Resetting ID.
@@ -190,13 +216,55 @@ public class InMemoryWidgetRepo implements WidgetRepo {
 
   @Override
   public List<Widget> retrieveAllWidgets() {
-    
+
     readLock.lock();
     try{
       return zIndexToWidgetStore.values().stream().map(widgetStore::get).collect(Collectors.toList());
     }finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  public List<Widget> filterWidgetsByCoOrdinateRange(Integer fromX, Integer fromY, Integer toX, Integer toY) {
+
+    // Using Binary search to find the lower bound giving a complexity of O(log NX) + O(log NY) as its a map within map.
+    
+    List<Widget> result = new ArrayList();
+    readLock.lock();
+    try{
+      Integer[] xKeys = widgetsSortedByCoOrdinateMap.keySet().toArray(new Integer[0]);
+      int xStartPosition = Arrays.binarySearch(xKeys, fromX);
+      for(int i = xStartPosition >= 0 ? xStartPosition : (xStartPosition * (-1))-1; i < xKeys.length; i++){
+        if(fromX <= xKeys[i] && xKeys[i] <= toX) {
+          SortedMap<Integer, Set<String>> yCoOrdinateMap = widgetsSortedByCoOrdinateMap.get(xKeys[i]);
+          Integer[] yKeys = yCoOrdinateMap.keySet().toArray(new Integer[0]);
+          int yStartPosition = Arrays.binarySearch(yKeys, fromY);
+          for(int j = yStartPosition >= 0 ? yStartPosition : (yStartPosition * (-1))-1; j < yKeys.length; j++){
+            if(fromY <= yKeys[j] && yKeys[j] <= toY) {
+              yCoOrdinateMap.get(yKeys[j]).forEach(value ->
+                  // Check if the widget is within range.
+                  Optional.ofNullable(widgetStore.get(value)).ifPresent(widget -> {
+                    Integer widthX = widget.getXCoOrdinate() + widget.getWidgetWidth();
+                    Integer widthY = widget.getYCoOrdinate() + widget.getWidgetHeight();
+                    if(fromX <= widthX && widthX <= toX && fromY <= widthY && widthY <= toY) {
+                      result.add(widget);
+                    }
+                  }));
+            }
+            else if(yKeys[j] > toY){
+              break;
+            }
+          }
+        }
+        else if(xKeys[i] > toX){
+          break;              
+        }        
+      }
+    }finally {
+      readLock.unlock();
+    }
+    return result;
   }
 
   @Override

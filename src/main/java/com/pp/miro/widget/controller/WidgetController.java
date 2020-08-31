@@ -67,6 +67,15 @@ public class WidgetController {
         ResponseEntity.ok().build() : ResponseEntity.notFound().build();
   }
 
+  @GetMapping("/filter/{fromX}/{fromY}/{toX}/{toY}")
+  public Collection<Widget> filterWidgetsByCoOrdinateRange(@PathVariable("fromX") Integer fromX, 
+                                                           @PathVariable("fromY") Integer fromY,
+                                                           @PathVariable("toX") Integer toX,
+                                                           @PathVariable("toY") Integer toY) {
+
+    return widgetService.filterWidgetsByCoOrdinateRange(fromX, fromY, toX, toY);
+  }
+
   @ExceptionHandler(IllegalArgumentException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
   public final String illegalArgumentExceptionHandler(final IllegalArgumentException e) {

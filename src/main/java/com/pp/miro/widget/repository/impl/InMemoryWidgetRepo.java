@@ -115,24 +115,31 @@ public class InMemoryWidgetRepo implements WidgetRepo {
   }
 
   private void putWidgetInCoOrdinateMap(Widget widget) {
-    SortedMap<Integer, Set<String>> yCoOrdinateMap =
-        Optional.ofNullable(widgetsSortedByCoOrdinateMap.get(widget.getXCoOrdinate())).orElse(new TreeMap());
-    Set<String> widgetIds = Optional.ofNullable(yCoOrdinateMap.get(widget.getYCoOrdinate())).orElse(new HashSet<String>());
-    widgetIds.add(widget.getId().toString());
-    yCoOrdinateMap.put(widget.getYCoOrdinate(), widgetIds);
-    widgetsSortedByCoOrdinateMap.put(widget.getXCoOrdinate(), yCoOrdinateMap);
+    try {
+      if (widget.getXCoOrdinate() != null && widget.getYCoOrdinate() != null && widget.getWidgetWidth() != null && widget.getWidgetHeight() != null) {
+        SortedMap<Integer, Set<String>> yCoOrdinateMap =
+            Optional.ofNullable(widgetsSortedByCoOrdinateMap.get(widget.getXCoOrdinate())).orElse(new TreeMap());
+        Set<String> widgetIds = Optional.ofNullable(yCoOrdinateMap.get(widget.getYCoOrdinate())).orElse(new HashSet<String>());
+        widgetIds.add(widget.getId().toString());
+        yCoOrdinateMap.put(widget.getYCoOrdinate(), widgetIds);
+        widgetsSortedByCoOrdinateMap.put(widget.getXCoOrdinate(), yCoOrdinateMap);
+      }
+    } catch (NullPointerException e){
+      log.warn("NPE caught while putting widget in widgetsSortedByCoOrdinateMap. Cant put in widget with null coOrdinates or dimensions.");
+    }
   }
 
   private void removeWidgetFromCoOrdinateMap(Widget widget) {
 
     Optional.ofNullable(widgetStore.get(widget.getId().toString())).ifPresent(
-        w -> Optional.ofNullable(widgetsSortedByCoOrdinateMap.get(w.getXCoOrdinate())).ifPresent(
-            yCoOrdinateMap -> Optional.ofNullable(yCoOrdinateMap.get(w.getYCoOrdinate())).ifPresent(
-                widgetIds -> {
-                  widgetIds.remove(w.getId().toString());
-                } 
-        )
-    ));
+        w -> { 
+          if(widget.getXCoOrdinate() != null && widget.getYCoOrdinate() != null){
+            Optional.ofNullable(widgetsSortedByCoOrdinateMap.get(w.getXCoOrdinate())).ifPresent(
+                yCoOrdinateMap -> Optional.ofNullable(yCoOrdinateMap.get(w.getYCoOrdinate())).ifPresent(
+                    widgetIds -> widgetIds.remove(w.getId().toString()))
+            );
+          }
+        });
   }
 
   private void removeWidgetFromZIndexMap(Widget widget){
